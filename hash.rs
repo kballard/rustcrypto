@@ -72,11 +72,9 @@ impl Hasher {
 
     /// Update this hasher with more input bytes
     pub fn update(&self, data: &[u8]) {
-        data.as_imm_buf(|pdata, len| {
-            unsafe {
-                libcrypto::EVP_DigestUpdate(self.ctx, pdata, len as c_uint)
-            }
-        });
+        unsafe {
+            libcrypto::EVP_DigestUpdate(self.ctx, data.as_ptr(), data.len() as c_uint);
+        }
     }
 
     /**
@@ -85,11 +83,9 @@ impl Hasher {
      */
     pub fn final(&self) -> ~[u8] {
         let mut res = vec::from_elem(self.len, 0u8);
-        res.as_mut_buf(|pres, _len| {
-            unsafe {
-                libcrypto::EVP_DigestFinal(self.ctx, pres, ptr::null());
-            }
-        });
+        unsafe {
+            libcrypto::EVP_DigestFinal(self.ctx, res.as_mut_ptr(), ptr::null());
+        }
         res
     }
 }

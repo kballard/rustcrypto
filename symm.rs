@@ -115,17 +115,13 @@ impl Crypter {
             };
             assert_eq!(key.len(), self.keylen);
 
-            key.as_imm_buf(|pkey, _len| {
-                iv.as_imm_buf(|piv, _len| {
-                    libcrypto::EVP_CipherInit(
-                        self.ctx,
-                        self.evp,
-                        pkey,
-                        piv,
-                        mode
-                    )
-                });
-            });
+            libcrypto::EVP_CipherInit(
+                self.ctx,
+                self.evp,
+                key.as_ptr(),
+                iv.as_ptr(),
+                mode
+            );
         }
     }
 
@@ -135,26 +131,20 @@ impl Crypter {
      */
     pub fn update(&self, data: &[u8]) -> ~[u8] {
         unsafe {
-            data.as_imm_buf(|pdata, len| {
-                let mut res = vec::from_elem(len + self.blocksize, 0u8);
+            let mut res = vec::from_elem(data.len() + self.blocksize, 0u8);
 
-                let reslen = res.as_mut_buf(|pres, _len| {
-                    let mut reslen = (len + self.blocksize) as u32;
+            let mut reslen = (data.len() + self.blocksize) as u32;
 
-                    libcrypto::EVP_CipherUpdate(
-                        self.ctx,
-                        pres,
-                        &mut reslen,
-                        pdata,
-                        len as c_int
-                    );
+            libcrypto::EVP_CipherUpdate(
+                self.ctx,
+                res.as_mut_ptr(),
+                &mut reslen,
+                data.as_ptr(),
+                data.len() as c_int
+            );
 
-                    reslen
-                });
-
-                res.truncate(reslen as uint);
-                res
-            })
+            res.truncate(reslen as uint);
+            res
         }
     }
 
@@ -165,11 +155,8 @@ impl Crypter {
         unsafe {
             let mut res = vec::from_elem(self.blocksize, 0u8);
 
-            let reslen = res.as_mut_buf(|pres, _len| {
-                let mut reslen = self.blocksize as c_int;
-                libcrypto::EVP_CipherFinal(self.ctx, pres, &mut reslen);
-                reslen
-            });
+            let mut reslen = self.blocksize as c_int;
+            libcrypto::EVP_CipherFinal(self.ctx, res.as_mut_ptr(), &mut reslen);
 
             res.truncate(reslen as uint);
             res

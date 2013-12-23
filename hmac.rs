@@ -55,10 +55,7 @@ pub fn HMAC(ht: HashType, key: ~[u8]) -> HMAC {
             key: [0u8, .. 128]
         };
 
-        HMAC_CTX_init(&mut ctx,
-                                 vec::raw::to_ptr(key),
-                                 key.len() as libc::c_int,
-                                 evp);
+        HMAC_CTX_init(&mut ctx, key.as_ptr(), key.len() as libc::c_int, evp);
 
         HMAC { ctx: ctx, len: mdlen }
     }
@@ -67,9 +64,7 @@ pub fn HMAC(ht: HashType, key: ~[u8]) -> HMAC {
 impl HMAC {
     pub fn update(&mut self, data: &[u8]) {
         unsafe {
-            data.as_imm_buf(|pdata, len| {
-                HMAC_Update(&mut self.ctx, pdata, len as libc::c_uint)
-            });
+            HMAC_Update(&mut self.ctx, data.as_ptr(), data.len() as libc::c_uint);
         }
     }
 
@@ -77,10 +72,8 @@ impl HMAC {
         unsafe {
             let mut res = vec::from_elem(self.len, 0u8);
             let mut outlen: libc::c_uint = 0;
-            res.as_mut_buf(|pres, _len| {
-                HMAC_Final(&mut self.ctx, pres, &mut outlen);
-                assert!(self.len == outlen as uint)
-            });
+            HMAC_Final(&mut self.ctx, res.as_mut_ptr(), &mut outlen);
+            assert!(self.len == outlen as uint)
             res
         }
     }
